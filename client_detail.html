@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>تفاصيل العميل</title>
+<style>
+body{background:black;color:white;font-family:Arial;margin:0;padding:0;}
+.container{display:flex;height:100vh;padding:20px;gap:20px;box-sizing:border-box;direction:rtl;}
+.left{flex:1;background:#222;padding:20px;border-radius:10px;}
+.right{flex:2;background:#111;padding:20px;border-radius:10px;overflow-y:auto;}
+h1,h3{text-align:center;margin:10px 0;}
+.input-box{margin:10px 0;display:flex;flex-direction:column;gap:10px;}
+input,select{padding:8px;border-radius:5px;border:none;outline:none;width:100%;}
+button{padding:10px;border:none;border-radius:5px;background:#00A2FF;color:white;cursor:pointer;transition:0.2s;}
+button:hover{background:#0080cc;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+th,td{border:1px solid #333;padding:5px;text-align:center;}
+.totals{margin-top:10px;font-size:16px;}
+.totals div{margin:5px 0;}
+.deleteBtn{background:red;color:white;border:none;padding:3px 6px;border-radius:5px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <!-- جدول الإضافة على اليمين -->
+    <div class="left">
+        <h3>إضافة عملية جديدة</h3>
+        <div class="input-box">
+            <input type="text" id="product" placeholder="اسم المنتج">
+            <input type="number" id="amount" placeholder="المبلغ">
+            <select id="type">
+                <option value="إضافة">إضافة</option>
+                <option value="سحب">سحب</option>
+            </select>
+            <button onclick="addTransaction()">إضافة العملية</button>
+            <button onclick="goBack()">عودة</button>
+        </div>
+    </div>
+
+    <!-- تفاصيل العميل على اليسار -->
+    <div class="right">
+        <h1>تفاصيل العميل</h1>
+        <div id="details"></div>
+
+        <h3>العمليات</h3>
+        <table id="transactionsTable">
+            <thead>
+                <tr>
+                    <th>المنتج</th>
+                    <th>المبلغ</th>
+                    <th>النوع</th>
+                    <th>التاريخ والوقت</th>
+                    <th>حذف</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div class="totals">
+            <div>مجموع السحب: <span id="totalSahb">0</span></div>
+            <div>مجموع الإضافة: <span id="totalAdd">0</span></div>
+            <div>التوتال: <span id="finalTotal">0</span></div>
+        </div>
+
+        <button onclick="deleteAll()">حذف الكل</button>
+        <button onclick="saveData()">حفظ البيانات</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDLGPZq3_iDOus8jNe3RJ5ARiB3JAyLSz0",
+  authDomain: "pc-club-89272.firebaseapp.com",
+  databaseURL: "https://pc-club-89272-default-rtdb.firebaseio.com",
+  projectId: "pc-club-89272",
+  storageBucket: "pc-club-89272.firebasestorage.app",
+  messagingSenderId: "167526968749",
+  appId: "1:167526968749:web:f57156a3095c9503838524"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const selectedClient = localStorage.getItem("selectedClient");
+if(!selectedClient){ window.location.href="dashboard.html"; }
+
+db.ref("clients/"+selectedClient).once("value").then(snapshot=>{
+    if(snapshot.exists()){
+        const data = snapshot.val();
+        document.getElementById("details").innerHTML = `
+            <p>العميل: ${selectedClient}</p>
+            <img src="${data.logo}" width="80" height="80">
+        `;
+    }
+});
+
+function formatDateTime(d){
+    const dt = new Date(d);
+    return dt.toLocaleString("ar-EG");
+}
+
+function loadTransactions(){
+    const tbody = document.querySelector("#transactionsTable tbody");
+    tbody.innerHTML="";
+    let totalSahb=0, totalAdd=0;
+
+    db.ref("clients/"+selectedClient+"/transactions").once("value").then(snapshot=>{
+        snapshot.forEach(tr=>{
+            const t = tr.val();
+            const trElem = document.createElement("tr");
+            trElem.innerHTML = `
+                <td>${t.product}</td>
+                <td>${t.amount}</td>
+                <td>${t.type}</td>
+                <td>${formatDateTime(t.timestamp)}</td>
+                <td><button class="deleteBtn" onclick="deleteTransaction('${tr.key}')">حذف</button></td>
+            `;
+            tbody.appendChild(trElem);
+
+            if(t.type === "سحب") totalSahb += t.amount;
+            else if(t.type === "إضافة") totalAdd += t.amount;
+        });
+
+        document.getElementById("totalSahb").textContent = totalSahb;
+        document.getElementById("totalAdd").textContent = totalAdd;
+
+        // التوتال = السحب - الإضافة، لا يظهر بالسالب
+        // التوتال = السحب - الإضافة، يظهر بالسالب لو الإضافة أكبر
+const total = totalSahb - totalAdd;
+document.getElementById("finalTotal").textContent = total;
+    });
+}
+
+function addTransaction(){
+    const product = document.getElementById("product").value.trim();
+    const amount = parseFloat(document.getElementById("amount").value);
+    const type = document.getElementById("type").value;
+
+    if(!product || isNaN(amount)){
+        alert("الرجاء إدخال اسم المنتج والمبلغ");
+        return;
+    }
+
+    const newData = { product, amount, type, timestamp: Date.now() };
+    db.ref("clients/"+selectedClient+"/transactions").push(newData)
+    .then(()=>{
+        document.getElementById("product").value="";
+        document.getElementById("amount").value="";
+        loadTransactions();
+    });
+}
+
+function deleteTransaction(key){
+    if(confirm("هل تريد حذف هذه العملية؟")){
+        db.ref("clients/"+selectedClient+"/transactions/"+key).remove().then(loadTransactions);
+    }
+}
+
+function deleteAll(){
+    if(confirm("هل تريد حذف كل العمليات؟")){
+        db.ref("clients/"+selectedClient+"/transactions").remove().then(loadTransactions);
+    }
+}
+
+function saveData(){
+    db.ref("clients/"+selectedClient+"/transactions").once("value").then(snapshot=>{
+        if(snapshot.exists()){
+            const transactions = snapshot.val();
+            const now = Date.now();
+            // نحفظ نسخة في history
+            db.ref("history/"+selectedClient+"/"+now).set(transactions)
+            .then(()=>{
+                alert("تم حفظ نسخة السجل بنجاح");
+            });
+        } else {
+            alert("لا توجد بيانات للحفظ");
+        }
+    });
+}	
+
+function goBack(){ window.location.href="dashboard.html"; }
+
+loadTransactions();
+</script>
+
+</body>
+</html>

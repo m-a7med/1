@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login | A7MED_ASHRAF</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial, sans-serif;}
+body{height:100vh;display:flex;justify-content:center;align-items:center;overflow:hidden;position:relative;background:black;}
+.bg-video{position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:-2;}
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background: rgba(0,0,0,0.2);z-index:-1;}
+.container{width:850px;height:500px;display:flex;background:rgba(0,0,0,0.6);backdrop-filter:blur(15px);border-radius:20px;overflow:hidden;box-shadow:0 0 40px rgba(0,0,0,0.5);}
+.left{width:50%;background:url('your-image.jpg') center/cover no-repeat;}
+.right{width:50%;padding:50px;color:white;display:flex;flex-direction:column;justify-content:center;}
+.right h2{margin-bottom:10px;font-size:28px;}
+.right p{font-size:14px;margin-bottom:30px;opacity:0.8;}
+.input-box{margin-bottom:20px;}
+.input-box input{width:100%;padding:12px;border:none;border-radius:8px;outline:none;}
+button{padding:12px;border:none;border-radius:10px;background:#00A2FF;color:white;font-size:16px;cursor:pointer;transition:0.3s;}
+button:hover{background:#0080cc;}
+@media(max-width:768px){
+.container{flex-direction:column;width:90%;height:auto;}
+.left{height:200px;width:100%;}
+.right{width:100%;padding:30px;}
+}
+</style>
+</head>
+
+<body>
+
+<!-- الفيديو -->
+<video class="bg-video" autoplay muted loop playsinline>
+    <source src="background.mp4" type="video/mp4">
+</video>
+
+<div class="overlay"></div>
+
+<div class="container">
+    <div class="left"></div>
+    <div class="right">
+        <h2>Secure Login</h2>
+        <p>Employee Dashboard<br>By A7MED_ASHRAF</p>
+
+        <div class="input-box">
+            <input type="text" id="username" placeholder="Username">
+        </div>
+
+        <div class="input-box">
+            <input type="password" id="password" placeholder="Password">
+        </div>
+
+        <button onclick="login()">Login</button>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDLGPZq3_iDOus8jNe3RJ5ARiB3JAyLSz0",
+  authDomain: "pc-club-89272.firebaseapp.com",
+  databaseURL: "https://pc-club-89272-default-rtdb.firebaseio.com",
+  projectId: "pc-club-89272",
+  appId: "1:167526968749:web:f57156a3095c9503838524"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function login(){
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    if(!username || !password){
+        alert("Enter Username and Password");
+        return;
+    }
+
+    db.ref("users/"+username).once("value")
+    .then(snapshot=>{
+        if(snapshot.exists()){
+            if(password === snapshot.val().password){
+                localStorage.setItem("loggedIn","true");
+                localStorage.setItem("user", username);
+                window.location.href="dashboard.html";
+            }else{
+                alert("Wrong Password");
+            }
+        }else{
+            alert("User Not Found");
+        }
+    });
+}
+</script>
+
+</body>
+</html>

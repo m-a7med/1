@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>تفاصيل النسخة</title>
+<style>
+body{background:black;color:white;font-family:Arial;margin:0;padding:20px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th,td{border:1px solid #333;padding:5px;text-align:center;}
+h1{text-align:center;margin-bottom:20px;}
+button{padding:10px;border:none;border-radius:5px;background:#00A2FF;color:white;cursor:pointer;margin-top:10px;}
+button:hover{background:#0080cc;}
+</style>
+</head>
+<body>
+
+<h1>تفاصيل النسخة</h1>
+<table>
+    <thead>
+        <tr>
+            <th>المنتج</th>
+            <th>المبلغ</th>
+            <th>النوع</th>
+            <th>التاريخ والوقت</th>
+        </tr>
+    </thead>
+    <tbody id="historyDetailBody"></tbody>
+</table>
+
+<button onclick="goBack()">عودة للسجل</button>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDLGPZq3_iDOus8jNe3RJ5ARiB3JAyLSz0",
+  authDomain: "pc-club-89272.firebaseapp.com",
+  databaseURL: "https://pc-club-89272-default-rtdb.firebaseio.com",
+  projectId: "pc-club-89272",
+  storageBucket: "pc-club-89272.firebasestorage.app",
+  messagingSenderId: "167526968749",
+  appId: "1:167526968749:web:f57156a3095c9503838524"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const client = localStorage.getItem("historyClient");
+const timestamp = localStorage.getItem("historyTimestamp");
+const tbody = document.getElementById("historyDetailBody");
+
+if(!client || !timestamp){ window.location.href="history.html"; }
+
+db.ref(`history/${client}/${timestamp}`).once("value").then(snapshot=>{
+    const transactions = snapshot.val();
+    for(let key in transactions){
+        const t = transactions[key];
+        const trElem = document.createElement("tr");
+        trElem.innerHTML = `
+            <td>${t.product}</td>
+            <td>${t.amount}</td>
+            <td>${t.type}</td>
+            <td>${new Date(t.timestamp).toLocaleString('ar-EG')}</td>
+        `;
+        tbody.appendChild(trElem);
+    }
+});
+
+function goBack(){ window.location.href="history.html"; }
+</script>
+
+</body>
+</html>

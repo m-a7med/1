@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard | Clients</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<style>
+body{
+    background:black;
+    color:white;
+    font-family:Arial;
+    margin:0;
+    padding:20px;
+}
+header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+header h1{
+    margin:0;
+}
+header button{
+    padding:8px 15px;
+    background:#00A2FF;
+    border:none;
+    color:white;
+    border-radius:5px;
+    cursor:pointer;
+    font-weight:bold;
+    transition:0.2s;
+}
+header button:hover{
+    background:#0080cc;
+}
+
+#clientsContainer{
+    display:flex;
+    flex-wrap:wrap;
+    gap:20px;
+}
+.clientCard{
+    background:#222;
+    width:150px;
+    padding:15px;
+    border-radius:10px;
+    text-align:center;
+    cursor:pointer;
+    position:relative;
+    transition:0.2s;
+}
+.clientCard:hover{background:#333;}
+.clientCard img{
+    width:80px;
+    height:80px;
+    border-radius:50%;
+    margin-bottom:10px;
+}
+.deleteBtn{
+    position:absolute;
+    top:5px;
+    right:5px;
+    background:red;
+    padding:3px 6px;
+    border-radius:5px;
+    font-size:12px;
+    cursor:pointer;
+}
+#addClientSection{
+    position:fixed;
+    top:20px;
+    right:20px;
+    background:#111;
+    padding:15px;
+    border-radius:10px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    z-index:1000;
+}
+#addClientSection input{
+    padding:8px;
+    border-radius:5px;
+    border:none;
+    outline:none;
+}
+#addClientSection button{
+    padding:8px;
+    background:#00A2FF;
+    color:white;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    transition:0.2s;
+}
+#addClientSection button:hover{
+    background:#0080cc;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Dashboard | Clients</h1>
+</header>
+
+<div id="clientsContainer"></div>
+
+<div id="addClientSection">
+    <h3>إضافة عميل جديد</h3>
+    <input type="text" id="newClient" placeholder="Client Name">
+    <input type="text" id="clientLogo" placeholder="Logo URL" value="https://via.placeholder.com/80">
+    <button onclick="addClient()">Add</button>
+    <button onclick="openHistory()">سجل العمليات</button>
+    <button onclick="logout()">تسجيل خروج</button>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDLGPZq3_iDOus8jNe3RJ5ARiB3JAyLSz0",
+  authDomain: "pc-club-89272.firebaseapp.com",
+  databaseURL: "https://pc-club-89272-default-rtdb.firebaseio.com",
+  projectId: "pc-club-89272",
+  storageBucket: "pc-club-89272.firebasestorage.app",
+  messagingSenderId: "167526968749",
+  appId: "1:167526968749:web:f57156a3095c9503838524"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* حماية الداشبورد */
+if(localStorage.getItem("loggedIn") !== "true"){
+    window.location.href="index.html";
+}
+
+/* تسجيل خروج */
+function logout(){
+    localStorage.removeItem("loggedIn");
+    localStorage.removeItem("user");
+    window.location.href="index.html";
+}
+
+/* فتح السجل بالـ password */
+function openHistory(){
+    const currentUser = localStorage.getItem("user");
+    if(!currentUser){
+        alert("لم يتم تسجيل المستخدم");
+        return;
+    }
+    const pass = prompt("ادخل كلمة المرور لفتح السجل:");
+    if(!pass) return;
+
+    db.ref("users/"+currentUser+"/password").once("value").then(snapshot=>{
+        if(snapshot.exists() && snapshot.val() === pass){
+            window.location.href="history.html";
+        } else {
+            alert("كلمة المرور غير صحيحة");
+        }
+    });
+}
+
+/* تحميل العملاء */
+function loadClients(){
+    const container = document.getElementById("clientsContainer");
+    container.innerHTML = "";
+    db.ref("clients").once("value").then(snapshot=>{
+        snapshot.forEach(clientSnap=>{
+            const clientName = clientSnap.key;
+            const data = clientSnap.val();
+            const card = document.createElement("div");
+            card.className = "clientCard";
+            card.innerHTML = `
+                <div class="deleteBtn" onclick="deleteClient('${clientName}', event)">X</div>
+                <img src="${data.logo}" alt="Client Logo">
+                <div>${clientName}</div>
+            `;
+            card.addEventListener("click", function(e){
+                if(!e.target.classList.contains("deleteBtn")){
+                    localStorage.setItem("selectedClient", clientName);
+                    window.location.href="client_detail.html";
+                }
+            });
+            container.appendChild(card);
+        });
+    });
+}
+
+/* إضافة عميل جديد */
+function addClient(){
+    const name = document.getElementById("newClient").value.trim();
+    const logo = document.getElementById("clientLogo").value.trim() || "https://via.placeholder.com/80";
+    if(!name){ alert("الرجاء إدخال اسم العميل"); return; }
+    db.ref("clients/"+name).set({ logo }).then(()=>{
+        alert("تم إضافة العميل!");
+        document.getElementById("newClient").value="";
+        document.getElementById("clientLogo").value="https://via.placeholder.com/80";
+        loadClients();
+    });
+}
+
+/* حذف عميل مع باسورد */
+function deleteClient(name, event){
+    event.stopPropagation();
+    const pass = prompt("ادخل كلمة المرور لحذف العميل:");
+    if(!pass) return;
+    const currentUser = localStorage.getItem("user");
+    db.ref("users/"+currentUser+"/password").once("value").then(snapshot=>{
+        if(snapshot.exists() && snapshot.val() === pass){
+            if(confirm(`هل تريد حذف العميل ${name}?`)){
+                db.ref("clients/"+name).remove().then(()=>loadClients());
+            }
+        } else {
+            alert("كلمة المرور غير صحيحة! لا يمكن الحذف.");
+        }
+    });
+}
+
+/* تحميل العملاء عند الفتح */
+loadClients();
+</script>
+
+</body>
+</html>

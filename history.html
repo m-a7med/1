@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>سجل النسخ المحفوظة</title>
+<style>
+body{background:black;color:white;font-family:Arial;margin:0;padding:20px;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #333;padding:8px;text-align:center;}
+tr:hover{background:#222;cursor:pointer;}
+h1{text-align:center;margin-bottom:20px;}
+</style>
+</head>
+<body>
+
+<h1>سجل النسخ المحفوظة</h1>
+<table>
+    <thead>
+        <tr>
+            <th>العميل</th>
+            <th>تاريخ الحفظ</th>
+        </tr>
+    </thead>
+    <tbody id="historyBody"></tbody>
+</table>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDLGPZq3_iDOus8jNe3RJ5ARiB3JAyLSz0",
+  authDomain: "pc-club-89272.firebaseapp.com",
+  databaseURL: "https://pc-club-89272-default-rtdb.firebaseio.com",
+  projectId: "pc-club-89272",
+  storageBucket: "pc-club-89272.firebasestorage.app",
+  messagingSenderId: "167526968749",
+  appId: "1:167526968749:web:f57156a3095c9503838524"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const tbody = document.getElementById("historyBody");
+
+db.ref("history").once("value").then(snapshot=>{
+    snapshot.forEach(clientSnap=>{
+        const client = clientSnap.key;
+        clientSnap.forEach(timeSnap=>{
+            const timestamp = timeSnap.key;
+            const trElem = document.createElement("tr");
+            trElem.innerHTML = `
+                <td>${client}</td>
+                <td>${new Date(parseInt(timestamp)).toLocaleString('ar-EG')}</td>
+            `;
+            // عند الضغط على الصف نفتح صفحة التفاصيل
+            trElem.addEventListener("click", ()=>{
+                localStorage.setItem("historyClient", client);
+                localStorage.setItem("historyTimestamp", timestamp);
+                window.location.href = "history_detail.html";
+            });
+            tbody.appendChild(trElem);
+        });
+    });
+});
+</script>
+
+</body>
+</html>
